@@ -28,6 +28,16 @@ def _attr(value):
         return str(value)
 
 
+def create_el(root, name):
+    def wrapped(body=None, **kwargs):
+        return Element(name, parent=root, body=body, **kwargs)
+    return wrapped
+
+
+def response():
+    return Verb("Response")
+
+
 class Element(object):
     """Twilio basic verb object."""
 
@@ -71,17 +81,3 @@ class Element(object):
             return u'<?xml version="1.0" encoding="UTF-8"?>' + xml
         else:
             return xml
-
-
-def create_el(root, name):
-    def wrapped(body=None, **kwargs):
-        return Element(name, parent=root, body=body, **kwargs)
-    return wrapped
-
-
-class Response(Element):
-    """Twilio response object."""
-
-    def __init__(self, **kwargs):
-        super(Response, self).__init__("Response", **kwargs)
-
