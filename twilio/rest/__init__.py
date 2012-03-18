@@ -37,52 +37,6 @@ class TwilioRestClient(object):
     A client for accessing the Twilio REST API
     """
 
-    def request(self, path, method=None, vars=None):
-        """sends a request and gets a response from the Twilio REST API
-
-        .. deprecated:: 3.0
-
-        :param path: the URL (relative to the endpoint URL, after the /v1
-        :param url: the HTTP method to use, defaults to POST
-        :param vars: for POST or PUT, a dict of data to send
-
-        :returns: Twilio response in XML or raises an exception on error
-
-        This method is only included for backwards compatability reasons.
-        It will be removed in a future version
-        """
-        logging.warning(":meth:`TwilioRestClient.request` is deprecated and "
-                        "will be removed in a future version")
-
-        vars = vars or {}
-        params = None
-        data = None
-
-        if not path or len(path) < 1:
-            raise ValueError('Invalid path parameter')
-        if method and method not in ['GET', 'POST', 'DELETE', 'PUT']:
-            raise NotImplementedError(
-                'HTTP %s method not implemented' % method)
-
-        if path[0] == '/':
-            uri = self.base + path
-        else:
-            uri = self.base + '/' + path
-
-        if method == "GET":
-            params = vars
-        elif method == "POST" or method == "PUT":
-            data = vars
-
-        headers = {
-            "User-Agent": "twilio-python",
-            }
-
-        resp = make_request(method, uri, auth=self.auth, data=data,
-                            params=params, headers=headers)
-
-        return resp.content
-
     def __init__(self, account=None, token=None, base="https://api.twilio.com",
                  version="2010-04-01", client=None):
         """

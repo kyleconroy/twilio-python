@@ -41,8 +41,7 @@ def parse_date(d):
         return str(d.date())
     elif isinstance(d, datetime.date):
         return str(d)
-    elif isinstance(d, str):
-        return d
+    return d
 
 
 def convert_boolean(bool):
