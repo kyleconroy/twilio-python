@@ -10,46 +10,37 @@ except:
     from twilio.contrib import jwt
 
 
-class RequestValidator(object):
+def compute_signature(token, uri, params):
+    """Compute the signature for a given request
 
-    def __init__(self, token):
-        self.token = token
+    :param uri: full URI that Twilio requested on your server
+    :param params: post vars that Twilio sent with the request
+    :param auth: tuple with (account_sid, token)
 
-    def compute_signature(self, uri, params):
-        """Compute the signature for a given request
+    :returns: The computed signature
+    """
+    s = unicode(uri)
+    if len(params) > 0:
+        for k, v in sorted(params.items()):
+            s += k + v
 
-        :param uri: full URI that Twilio requested on your server
-        :param params: post vars that Twilio sent with the request
-        :param auth: tuple with (account_sid, token)
+    # compute signature and compare signatures
+    mac = hmac.new(token, s.encode("utf-8"), sha1)
+    computed = base64.b64encode(mac.digest())
 
-        :returns: The computed signature
-        """
-        s = unicode(uri)
-        if len(params) > 0:
-            for k, v in sorted(params.items()):
-                s += k + v
+    return computed.strip()
 
-        # compute signature and compare signatures
+def validate(token, uri, params, signature):
+    """Validate a request from Twilio
 
-        mac = hmac.new(self.token, s.encode("utf-8"), sha1)
-        computed = base64.b64encode(mac.digest())
+    :param uri: full URI that Twilio requested on your server
+    :param params: post vars that Twilio sent with the request
+    :param signature: expexcted signature in HTTP X-Twilio-Signature header
+    :param auth: tuple with (account_sid, token)
 
-        # print base64.b64decode(computed.strip())
-        # print base64.b64decode(computed.strip()).decode("utf-8")
-
-        return computed.strip()
-
-    def validate(self, uri, params, signature):
-        """Validate a request from Twilio
-
-        :param uri: full URI that Twilio requested on your server
-        :param params: post vars that Twilio sent with the request
-        :param signature: expexcted signature in HTTP X-Twilio-Signature header
-        :param auth: tuple with (account_sid, token)
-
-        :returns: True if the request passes validation, False if not
-        """
-        return self.compute_signature(uri, params) == signature
+    :returns: True if the request passes validation, False if not
+    """
+    return compute_signature(token, uri, params) == signature
 
 
 class TwilioCapability(object):
