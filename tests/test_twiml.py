@@ -60,7 +60,7 @@ def test_say_loop_great_britian():
 def test_say_loop_woman():
     """should say have a woman say hello monkey and loop 3 times"""
     r = reponse()
-    r.say("Hello Monkey", loop=3, voice=twiml.WOMAN)
+    r.say("Hello Monkey", loop=3, voice="woman")
     xml = '<reponse><Say loop="3" voice="woman">Hello Monkey</Say></reponse>'
     assert_true(xml_compare(r.root, ET.fromstring(xml)))
 

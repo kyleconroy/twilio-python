@@ -1,24 +1,4 @@
-"""
-Make sure to check out the TwiML overview and tutorial
-"""
-
-try:
-    from lxml import etree
-except ImportError:
-    import xml.etree.ElementTree as etree
-
-
-MAN = 'man'
-WOMAN = 'woman'
-
-ENGLISH = 'en'
-BRITISH = 'en-gb'
-SPANISH = 'es'
-FRENCH = 'fr'
-GERMAN = 'de'
-
-GET = "GET"
-POST = "POST"
+import xml.etree.ElementTree as etree
 
 
 def _attr(value):
