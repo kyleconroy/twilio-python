@@ -8,20 +8,31 @@ def _attr(value):
         return str(value)
 
 
-def create_el(root, name):
+def _create_el(root, name):
     def wrapped(body=None, **kwargs):
         return Element(name, parent=root, body=body, **kwargs)
     return wrapped
 
 
 def response():
-    return Verb("Response")
+    """Create a new TwiML Response
+
+    Returns a "Reponse" Element
+    """
+    return Element("Response")
 
 
 class Element(object):
-    """Twilio basic verb object."""
+    """Create a XML element
 
-    def __init__(self, name, parent=None, body=None, **kwargs):
+    :param tag: Tag for this element
+    :param parent: Parent element (if any)
+    :param body: XML body (if any)
+
+    All keyword arguments turn into element attributes
+    """
+
+    def __init__(self, tag, parent=None, body=None, **kwargs):
         if "sender" in kwargs:
             kwargs["from"] = kwargs["sender"]
             del kwargs["sender"]
@@ -29,9 +40,9 @@ class Element(object):
         kwargs = {k: _attr(v) for k,v in kwargs.iteritems() if v is not None}
 
         if parent is not None:
-            self.root = etree.SubElement(parent, name, **kwargs) 
+            self.root = etree.SubElement(parent, tag, **kwargs) 
         else:
-            self.root = etree.Element(name, **kwargs) 
+            self.root = etree.Element(tag, **kwargs) 
 
         if body is not None:
             self.root.text = body
@@ -46,11 +57,10 @@ class Element(object):
         return False
 
     def __getattr__(self, name):
-        return create_el(self.root, name.title())
+        return _create_el(self.root, name.title())
 
     def toxml(self, xml_declaration=True):
-        """
-        Return the contents of this verb as an XML string
+        """Return the contents of this verb as an XML string
 
         :param bool xml_declaration: Include the XML declaration. Defaults to
                                      True

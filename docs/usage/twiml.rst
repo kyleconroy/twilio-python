@@ -12,7 +12,7 @@ TwiML creation begins with the :class:`Response` verb. Each successive verb is c
 
     from twilio import twiml
 
-    r = twiml.Response()
+    r = twiml.response()
     r.say("Hello")
     print str(r)
 
@@ -28,7 +28,7 @@ of the verb as the first argument. All attributes are keyword arguments.
 
     from twilio import twiml
 
-    r = twiml.Response()
+    r = twiml.response()
     r.play("https://api.twilio.com/cowbell.mp3", loop=5)
     print str(r)
 
@@ -43,7 +43,7 @@ Python 2.6+ added the :const:`with` statement for context management. Using :con
 
     from twilio import twiml
 
-    r = twiml.Response()
+    r = twiml.response()
     r.say("hello")
     with r.gather(finishOnKey=4) as g:
         g.say("world")
@@ -65,7 +65,7 @@ If you don't want the XML declaration in your output, use the :meth:`toxml` meth
 
     from twilio import twiml
 
-    r = twiml.Response()
+    r = twiml.response()
     r.say("hello")
     with r.gather(finishOnKey=4) as g:
         g.say("world")
