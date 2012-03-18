@@ -33,6 +33,10 @@ def find_credentials():
         return None, None
 
 
+def ntuple(data):
+    return namedtuple("ntuple", data.iterkeys())(**data)
+
+
 def camel_case(name):
     return ''.join(word.title() for word in name.split("_"))
 
@@ -136,14 +140,61 @@ class Resource(object):
         api_request(self._auth, self._url, method="DELETE")
 
     def update(self, **kwargs):
-        api_request(self._auth, self._url, method="POST", data=kwargs)
+        data = api_request(self._auth, self._url, method="POST", data=kwargs)
+        self._load(data)
 
 
-# Custom cla
-class AvailablePhoneNumbers:
+class Call(Resource):
 
-    def list(self, type="local", country="US"):
-        pass
+    def cancel(self):
+        """ If this call is queued or ringing, cancel the call.
+        Will not affect in-progress calls.
+        """
+        self.update(status="canceled")
+
+    def hangup(self):
+        """ If this call is currently active, hang up the call. If this call is
+        scheduled to be made, remove the call from the queue.
+        """
+        self.update(status="completed")
+
+    def route(self, url, method="POST"):
+        """Route this call to another url.
+
+        :param url: A valid URL that returns TwiML.
+        :param method: The HTTP method Twilio uses when requesting the URL.
+        """
+        self.update(url=url, method=method)
+
+
+class Account(Resource):
+
+    def close(self):
+        """Permenently deactivate this account"""
+        self.update(status="closed")
+
+    def suspend(self):
+        """Temporarily suspend this account"""
+        self.update(status="suspended")
+
+    def activate(self):
+        """Reactivate this account"""
+        self.update(status="active")
+
+
+class Participant(Resource):
+
+    def mute(self):
+        """Mute the participant"""
+        self.update(muted=True)
+
+    def unmute(self):
+        """Unmute the participant"""
+        self.update(muted=False)
+
+    def kick(self):
+        """Remove the participant from the given conference"""
+        self.delete()
 
 
 class ListResource(object):
@@ -163,6 +214,12 @@ class ListResource(object):
 
     def __iter__(self):
         return self.items(self._auth, self._name)
+
+    def create(self, **kwargs):
+        resource_data = api_request(self._auth, self._url, data=kwargs)
+        sid = resource_data.get(u"sid", u"")
+        url = resource_data.get(u"uri", self._url + u"/" + sid)
+        return Resource(self._auth, url, **resource_data)
 
     def items(self, **kwargs):
         data = {u"next_page_uri": self._url}
@@ -186,6 +243,33 @@ class ListResource(object):
         return self[key]
 
 
+class AvailablePhoneNumbers(ListResource):
+
+    def items(self, type="Local", country="US", **kwargs):
+        url = self._url + u"/" + type + u"/" + country
+        data = api_request(self._auth, url, params=kwargs)
+        for resource_data in data[self._name]:
+            yield "", ntuple(resource)
+
+    def search(self, **kwargs):
+        return self.items(**kwargs)
+
+
+class IncomingPhoneNumbers(ListResource):
+
+    def purchase(self, **kwargs):
+        return self.create(**kwargs)
+
+
+class OutgoingCallerIds(ListResource):
+
+    def create(self, **kwargs):
+        return ntuple(api_request(self._auth, self._url, data=kwargs))
+
+    def validate(self, **kwargs):
+        return self.create(**kwargs)
+
+
 class Client(object):
 
     def __init__(self, account=None, token=None,
@@ -201,10 +285,12 @@ class Client(object):
 
     def __getattr__(self, key):
         name = camel_case(key)
-        if name == "Accounts":
+        if name == u"Accounts":
             attr = ListResource(self._auth, self._api_base + u"/" + name)
-        elif name == "Sandbox":
+        elif name == u"Sandbox":
             attr = Resource(self._auth, self._base + u"/" + name)
+        elif name == u"Messages":
+            attr = ListResource(self._auth, self._base + u"/Sms/" + name)
         else:
             attr = ListResource(self._auth, self._base + u"/" + name)
 
