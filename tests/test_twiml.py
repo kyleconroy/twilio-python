@@ -1,26 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import with_statement
-import re
-import twilio
-import sys
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
-
 from twilio import twiml
 from twilio.twiml import Response
 import xml.etree.ElementTree as ET
 from xml_compare import xml_compare
 from nose.tools import assert_equals, assert_true
 
-class TwilioTest(unittest.TestCase):
-
-    def strip(self, r):
-        return str(r)
-
-    def improperAppend(seld, verb):
-        pass
 
 def assert_xml_equals(xml1, xml2):
     print xml1
