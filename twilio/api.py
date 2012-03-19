@@ -5,6 +5,7 @@ import requests
 import json
 import os
 import urlparse
+import re
 
 AUTH_MESSAGE = """
 Twilio could not find your account credentials. Pass them into the
@@ -22,6 +23,26 @@ and be sure to replace the values for the Account SID and auth token with the
 values from your Twilio Account at https://www.twilio.com/user/account.
 """
 
+first_cap_re = re.compile('(.)([A-Z][a-z]+)')
+all_cap_re = re.compile('([a-z0-9])([A-Z])')
+
+
+def uncamelcase(name):
+    s1 = first_cap_re.sub(r'\1_\2', name)
+    return all_cap_re.sub(r'\1_\2', s1).lower()
+
+
+def camelcase(name):
+    return ''.join(word.title() for word in name.split("_"))
+
+
+def resource(name, auth, url, **kwargs):
+    return globals().get(name[:-1], Resource)(auth, url, **kwargs)
+
+
+def list_resource(name, auth, url):
+    return globals().get(name, ListResource)(auth, url)
+
 
 def find_credentials():
     """Look in the current environment for Twilio credentails"""
@@ -35,10 +56,6 @@ def find_credentials():
 
 def ntuple(data):
     return namedtuple("ntuple", data.iterkeys())(**data)
-
-
-def camel_case(name):
-    return ''.join(word.title() for word in name.split("_"))
 
 
 def gt_lt(name):
@@ -60,12 +77,12 @@ def param_value(v):
 def parse_name(url):
     o = urlparse.urlparse(url)
     path, ext = os.path.splitext(o.path)
-    name = os.path.split(path)[1].lower()
+    name = uncamelcase(os.path.split(path)[1])
     return urlparse.urlunparse([o.scheme, o.netloc, path, "", "", ""]), name
 
 
 def param_key(k):
-    return camel_case(gt_lt(k))
+    return camelcase(gt_lt(k))
 
 
 def twilio_args(data):
@@ -199,18 +216,15 @@ class Participant(Resource):
 
 class ListResource(object):
 
-    def resource(self):
-        return REGISTRY.get(self._name, Resource)
-
     def __init__(self, auth, url): 
         self._auth = auth
         self._url, self._name = parse_name(url)
 
     def __getitem__(self, key):
-        return Resource(self._auth, self._url + u"/" + key)
+        return resource(self._name, self._auth, self._url + u"/" + key)
 
     def __delitem__(self, key):
-        Resource(self._auth, self._url + u"/" + key).delete()
+        resource(self._name, self._auth, self._url + u"/" + key).delete()
 
     def __iter__(self):
         return self.items(self._auth, self._name)
@@ -219,7 +233,7 @@ class ListResource(object):
         resource_data = api_request(self._auth, self._url, data=kwargs)
         sid = resource_data.get(u"sid", u"")
         url = resource_data.get(u"uri", self._url + u"/" + sid)
-        return Resource(self._auth, url, **resource_data)
+        return resource(self._name, self._auth, url, **resource_data)
 
     def items(self, **kwargs):
         data = {u"next_page_uri": self._url}
@@ -228,8 +242,8 @@ class ListResource(object):
             for resource_data in data[self._name]:
                 sid = resource_data.get(u"sid", u"")
                 url = resource_data.get(u"uri", self._url + u"/" + sid)
-                resource = Resource(self._auth, url, **resource_data)
-                yield sid, resource
+                r = resource(self._name, self._auth, url, **resource_data)
+                yield sid, r 
 
     def values(self, **kwargs):
         for key, value in self.items(**kwargs):
@@ -246,10 +260,10 @@ class ListResource(object):
 class AvailablePhoneNumbers(ListResource):
 
     def items(self, type="Local", country="US", **kwargs):
-        url = self._url + u"/" + type + u"/" + country
+        url = self._url + u"/" + country + u"/" + type
         data = api_request(self._auth, url, params=kwargs)
         for resource_data in data[self._name]:
-            yield "", ntuple(resource)
+            yield "", ntuple(resource_data)
 
     def search(self, **kwargs):
         return self.items(**kwargs)
@@ -284,15 +298,15 @@ class Client(object):
         self._base = self._api_base + u"/Accounts/" + self._auth[0]
 
     def __getattr__(self, key):
-        name = camel_case(key)
+        name = camelcase(key)
         if name == u"Accounts":
             attr = ListResource(self._auth, self._api_base + u"/" + name)
         elif name == u"Sandbox":
             attr = Resource(self._auth, self._base + u"/" + name)
         elif name == u"Messages":
-            attr = ListResource(self._auth, self._base + u"/Sms/" + name)
+            attr = ListResource(self._auth, self._base + u"/SMS/" + name)
         else:
-            attr = ListResource(self._auth, self._base + u"/" + name)
+            attr = list_resource(name, self._auth, self._base + u"/" + name)
 
         setattr(self, key, attr)
         return attr
